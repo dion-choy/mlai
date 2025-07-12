@@ -14,7 +14,7 @@ frame = None
 
 def import_and_predict(image_data, model):
     
-        size = (75,75)    
+        size = (100,100)    
         image = ImageOps.fit(image_data, size, Image.LANCZOS)
         image = image.convert('RGB')
         image = np.asarray(image)
@@ -26,7 +26,7 @@ def import_and_predict(image_data, model):
         
         return prediction
 
-model = tf.keras.models.load_model('./my_model.hdf5')
+model = tf.keras.models.load_model('./models/gen2/model.hdf5')
 
     
 cap = cv2.VideoCapture(0)
