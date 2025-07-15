@@ -37,16 +37,11 @@ image = Image.open('broccoli.jpg')
 prediction = import_and_predict(image, model)
 #print(prediction)
 
-if np.argmax(prediction) == 0:
+if prediction[0][0] >= 0.5:
     predict="It is a broccoli!"
-elif np.argmax(prediction) == 1:
+elif prediction[0][1] >= 0.5:
     predict="It is a cauliflower!"
 else:
     predict="It is a unknown!"
-print(prediction)
+print(predict)
 
-
-
-
-cv2.destroyAllWindows()
-sys.exit()

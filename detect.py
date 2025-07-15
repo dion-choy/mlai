@@ -14,7 +14,7 @@ frame = None
 
 def import_and_predict(image_data, model):
     
-        size = (150,150)    
+        size = (100,100)    
         image = ImageOps.fit(image_data, size, Image.LANCZOS)
         image = image.convert('RGB')
         image = np.asarray(image)
@@ -26,8 +26,13 @@ def import_and_predict(image_data, model):
         
         return prediction
 
-model = tf.keras.models.load_model('./models/gen3/model.keras')
+# model = tf.keras.models.load_model('./models/gen2/model.h5')
+# converter = tf.lite.TFLiteConverter.from_keras_model(model)
+# tflite_model = converter.convert()
 
+# # Save the model.
+# with open('tflitemodel.tflite', 'wb') as f:
+#   f.write(tflite_model)
     
 cap = cv2.VideoCapture(0)
 
@@ -46,16 +51,17 @@ while (True):
     # Display the predictions
     # print("ImageNet ID: {}, Label: {}".format(inID, label))
     prediction = import_and_predict(image, model)
-    #print(prediction)
-    print(prediction)
-    if prediction[0][0] >= 0.5:
-        predict="It is a broccoli!"
-    elif prediction[0][1] >= 0.5:
-        predict="It is a cauliflower!"
+    pridict="unknown"
+    if prediction[0][0]>0.9:
+        predict="Broccoli"+str(prediction[0][0])
+    elif prediction[0][1]>0.9:
+        predict="cauliflower"+str(prediction[0][1])
     else:
-        predict="It is a unknown!"
-    predict+=" "+str(prediction)
-    cv2.putText(original, predict, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        prediction="unknown"
+
+    
+    
+    cv2.putText(original, ["Broccoli", "Cauliflour", "unknown"][np.argmax(prediction)], (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
     cv2.imshow("Classification", original)
 
     if (cv2.waitKey(1) & 0xFF == ord('q')):
