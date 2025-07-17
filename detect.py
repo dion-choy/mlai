@@ -26,7 +26,7 @@ def import_and_predict(image_data, model):
         
         return prediction
 
-# model = tf.keras.models.load_model('./models/gen2/model.h5')
+model = tf.keras.models.load_model('./models/gen5 copy/model.hdf5')
 # converter = tf.lite.TFLiteConverter.from_keras_model(model)
 # tflite_model = converter.convert()
 
@@ -44,24 +44,23 @@ else:
 while (True):
     ret, original = cap.read()
 
-    frame = cv2.resize(original, (100, 100))
+    frame = cv2.resize(original, (224, 224))
     cv2.imwrite(filename='img.jpg', img=original)
     image = Image.open('img.jpg')
 
     # Display the predictions
     # print("ImageNet ID: {}, Label: {}".format(inID, label))
     prediction = import_and_predict(image, model)
-    pridict="unknown"
-    if prediction[0][0]>0.9:
-        predict="Broccoli"+str(prediction[0][0])
-    elif prediction[0][1]>0.9:
-        predict="cauliflower"+str(prediction[0][1])
-    else:
-        prediction="unknown"
+    #print(prediction)
 
+    if np.argmax(prediction) == 0:
+        predict="It is a broccoli!"
+    elif np.argmax(prediction) == 1:
+        predict="It is a cauliflower!"
+    else:
+        predict="It is a unknown!"
     
-    
-    cv2.putText(original, ["Broccoli", "Cauliflour", "unknown"][np.argmax(prediction)], (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+    cv2.putText(original, predict + str(prediction[0]), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
     cv2.imshow("Classification", original)
 
     if (cv2.waitKey(1) & 0xFF == ord('q')):
