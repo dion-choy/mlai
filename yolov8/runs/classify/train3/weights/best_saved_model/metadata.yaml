@@ -1,0 +1,23 @@
+description: Ultralytics YOLOv8m-cls model trained on ../datasets
+author: Ultralytics
+date: '2025-07-20T14:02:30.984987'
+version: 8.3.168
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 1
+task: classify
+batch: 1
+imgsz:
+- 224
+- 224
+names:
+  0: broccoli
+  1: cauliflower
+  2: unknown
+args:
+  batch: 1
+  fraction: 1.0
+  half: false
+  int8: false
+  nms: false
+channels: 3
