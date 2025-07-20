@@ -1,13 +1,16 @@
 package com.example.tensorflowdemo
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.AdapterView
@@ -31,8 +34,10 @@ import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
+import org.tensorflow.lite.support.image.ops.ResizeWithCropOrPadOp
 import org.tensorflow.lite.support.image.ops.Rot90Op
 import java.io.ByteArrayOutputStream
+import kotlin.math.max
 
 
 class MainActivity : AppCompatActivity(), OnItemSelectedListener {
@@ -47,6 +52,7 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
     private val REQUIRED_PERMISSIONS = arrayOf("android.permission.CAMERA")
     private lateinit var cameraProviderFuture : ListenableFuture<ProcessCameraProvider>
     private lateinit var context:Context;
+    var isImport:Boolean=false
     val models= arrayOf("gen7.tflite", "gen8.tflite", "yolo.tflite")
     fun loadModel(filename:String, context:Context){
         val model= FileUtil.loadMappedFile(context, filename)
@@ -79,6 +85,36 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
                 }, ContextCompat.getMainExecutor(this))
         } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
+        }
+
+
+        binding.button.setOnClickListener{
+            if(!isImport) {
+                isImport=true
+                val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
+                startActivityForResult(intent, 1)
+                binding.button.text="Back to Preview"
+            }else{isImport=false
+                binding.button.text="import image"
+            }
+        }
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode === RESULT_OK) {
+            // compare the resultCode with the
+            // constant
+            if (requestCode === 1) {
+                // Get the url of the image from data
+                val selectedImageUri: Uri = data?.data!!
+                if (null != selectedImageUri) {
+                    // update the image view in the layout
+                    //binding.imageView.setImageURI(selectedImageUri)
+                    val bitmap=MediaStore.Images.Media.getBitmap(this.getContentResolver(),selectedImageUri)
+                    binding.textView.text=classify(bitmap)
+
+                }
+            }
         }
     }
     override fun onItemSelected(parent: AdapterView<*>?, view: View,
@@ -134,16 +170,19 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
             .build()
 
         imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), { imageProxy ->
-            val bitmap = imageProxyToBitmap(imageProxy)
-            if (bitmap != null) {
-                val label = classify(bitmap)
-                runOnUiThread {
-                    binding.textView.text = label
+            if (!isImport) {
+                val bitmap = imageProxyToBitmap(imageProxy)
+                if (bitmap != null) {
+                    val label = classify(bitmap)
+                    runOnUiThread {
+                        binding.textView.text = label
+                    }
                 }
             }
             imageProxy.close()
         })
         var camera = cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, preview,imageAnalysis)
+
     }
 
     private fun imageProxyToBitmap(imageProxy: androidx.camera.core.ImageProxy): Bitmap? {
@@ -173,11 +212,13 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
 
         // TODO: Add code to run inference with TF Lite.
         // Pre-processing: resize the input image to match the model input shape.
-        val imageProcessor =
-            ImageProcessor.Builder()
-                .add(Rot90Op(3))
-                .add(ResizeOp(inputImageWidth, inputImageHeight, ResizeOp.ResizeMethod.BILINEAR))
-                .build()
+        val smallest= Math.min(bitmap.width,bitmap.height)
+        var ip:ImageProcessor.Builder = ImageProcessor.Builder()
+        if(!isImport){ip=ip.add(Rot90Op(3))}
+        ip=ip.add(ResizeWithCropOrPadOp(smallest, smallest))
+        ip=ip.add(ResizeOp(inputImageWidth, inputImageHeight, ResizeOp.ResizeMethod.BILINEAR))
+        val imageProcessor=ip.build()
+
         //binding.imageView.setImageBitmap(bitmap)
         val myTensorImage= TensorImage(DataType.FLOAT32)
         val rgbBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
