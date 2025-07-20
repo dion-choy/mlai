@@ -8,10 +8,6 @@
     tools:context=".MainActivity">
 
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/previewView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -21,11 +17,21 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-
+        <androidx.camera.view.PreviewView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/previewView"></androidx.camera.view.PreviewView>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+
+            <Button
+                android:id="@+id/button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Import Image" />
 
             <Spinner
                 android:id="@+id/spinner"
@@ -61,9 +67,9 @@
 
                 <ImageView
                     android:id="@+id/imageView2"
-                    android:layout_width="70dp"
-                    android:layout_height="70dp"
-                    android:scaleType="fitCenter"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:scaleType="centerCrop"
                     tools:srcCompat="@tools:sample/avatars" />
 
             </LinearLayout>
