@@ -94,8 +94,9 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
                 val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
                 startActivityForResult(intent, 1)
                 binding.button.text="Back to Preview"
-            }else{isImport=false
-                binding.button.text="import image"
+            }else{
+                isImport=false
+                binding.button.text="Import image"
             }
         }
     }
@@ -121,6 +122,8 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
                                 position: Int,id: Long)
     {
         loadModel(models[position],context)
+        isImport=false
+        binding.button.text="Import image"
     }
 
     override fun onNothingSelected(parent: AdapterView<*>?) {}
