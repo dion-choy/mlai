@@ -4,13 +4,15 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.ImageFormat
-import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.widget.AdapterView
+import android.widget.AdapterView.OnItemSelectedListener
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -29,10 +31,11 @@ import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
+import org.tensorflow.lite.support.image.ops.Rot90Op
 import java.io.ByteArrayOutputStream
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), OnItemSelectedListener {
     lateinit var interpreter:Interpreter;
     var inputImageWidth:Int= 0;
     var inputImageHeight:Int=0;
@@ -43,23 +46,31 @@ class MainActivity : AppCompatActivity() {
     private val REQUEST_CODE_PERMISSIONS = 101
     private val REQUIRED_PERMISSIONS = arrayOf("android.permission.CAMERA")
     private lateinit var cameraProviderFuture : ListenableFuture<ProcessCameraProvider>
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-         binding= ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        val context:Context=this
-        val model= FileUtil.loadMappedFile(context, "tflitemodel.tflite")
+    private lateinit var context:Context;
+    val models= arrayOf("gen7.tflite", "yolo.tflite")
+    fun loadModel(filename:String, context:Context){
+        val model= FileUtil.loadMappedFile(context, filename)
         val interpreter= Interpreter(model)
         val inputShape = interpreter.getInputTensor(0).shape()
         this.inputImageWidth = inputShape[1]
         this.inputImageHeight = inputShape[2]
-        Log.i("width",(this.inputImageWidth).toString())
-        Log.i("height",this.inputImageWidth.toString())
-        val dtype = interpreter.getInputTensor(0).dataType()
-        Log.i("inputDtype", dtype.toString())
         modelInputSize = FLOAT_TYPE_SIZE * inputImageWidth *
                 inputImageHeight * PIXEL_SIZE
         this.interpreter=interpreter;
+    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding= ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        context=this
+        loadModel("gen7.tflite", context)
+
+        val spinner=binding.spinner
+        spinner.onItemSelectedListener=this
+        val ad: ArrayAdapter<*> = ArrayAdapter<Any?>(this, android.R.layout.simple_spinner_item, models)
+        ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = ad
+
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         if (allPermissionsGranted()) {
                 cameraProviderFuture.addListener(Runnable {
@@ -70,6 +81,13 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
     }
+    override fun onItemSelected(parent: AdapterView<*>?, view: View,
+                                position: Int,id: Long)
+    {
+        loadModel(models[position],context)
+    }
+
+    override fun onNothingSelected(parent: AdapterView<*>?) {}
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -92,7 +110,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun allPermissionsGranted(): Boolean {
-
         for (permission in REQUIRED_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(
                     this,
@@ -110,7 +127,6 @@ class MainActivity : AppCompatActivity() {
         var cameraSelector : CameraSelector = CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
             .build()
-
         preview.setSurfaceProvider(binding.previewView.getSurfaceProvider())
 
         val imageAnalysis = ImageAnalysis.Builder()
@@ -127,7 +143,6 @@ class MainActivity : AppCompatActivity() {
             }
             imageProxy.close()
         })
-
         var camera = cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, preview,imageAnalysis)
     }
 
@@ -147,7 +162,8 @@ class MainActivity : AppCompatActivity() {
         val out = ByteArrayOutputStream()
         yuvImage.compressToJpeg(Rect(0, 0, yuvImage.width, yuvImage.height), 75, out)
         val imageBytes = out.toByteArray()
-        return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)    }
+        return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+    }
     override fun onDestroy(){
         super.onDestroy()
         this.interpreter.close()
@@ -159,6 +175,7 @@ class MainActivity : AppCompatActivity() {
         // Pre-processing: resize the input image to match the model input shape.
         val imageProcessor =
             ImageProcessor.Builder()
+                .add(Rot90Op(3))
                 .add(ResizeOp(inputImageWidth, inputImageHeight, ResizeOp.ResizeMethod.BILINEAR))
                 .build()
         //binding.imageView.setImageBitmap(bitmap)
@@ -168,10 +185,10 @@ class MainActivity : AppCompatActivity() {
         val normaliser=ImageProcessor.Builder()
             .add(NormalizeOp(0f,255f))
             .build()
-
         var myimg=imageProcessor.process(myTensorImage)
         binding.imageView2.setImageBitmap(myimg.bitmap)
         myimg=normaliser.process(myimg)
+
         // Define an array to store the model output.
         val output = Array(1) { FloatArray(3) }
         Log.i("width",myimg.width.toString())
@@ -190,8 +207,8 @@ class MainActivity : AppCompatActivity() {
         val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
         val classes=arrayOf("Broccoli","Cauliflower","Unknown")
         val resultString =
-            "Prediction Result: %s\nBroccoli: %2f\nCauliflower: %2f\nUnknown: %2f"
-                .format(classes[maxIndex], result[0],result[1],result[2])
+            "Image Size: %d x %d\nPrediction Result: %s\nBroccoli: %2f\nCauliflower: %2f\nUnknown: %2f"
+                .format(inputImageWidth,inputImageHeight,classes[maxIndex], result[0],result[1],result[2])
 
         return resultString
     }
