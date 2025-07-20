@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.example.tensorflowdemo.databinding.ActivityMainBinding
+import com.example.tensorflowdemo.ml.Model
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
@@ -18,6 +19,7 @@ import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -81,33 +83,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun classify(bitmap: Bitmap): String {
 
-        // TODO: Add code to run inference with TF Lite.
-        // Pre-processing: resize the input image to match the model input shape.
-        val imageProcessor =
-            ImageProcessor.Builder()
-                .add(ResizeOp(inputImageHeight, inputImageWidth, ResizeOp.ResizeMethod.BILINEAR))
-                .add(NormalizeOp(0f,255f))
-                .build()
-        //binding.imageView.setImageBitmap(bitmap)
-        val myTensorImage= TensorImage(DataType.FLOAT32)
-        val rgbBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-        myTensorImage.load(rgbBitmap)
-        val myimg=imageProcessor.process(myTensorImage)
-        // Define an array to store the model output.
-        val output = Array(1) { FloatArray(3) }
-        Log.i("width",myimg.width.toString())
-        Log.i("height",myimg.height.toString())
-        Log.i("colorSpace",myimg.getColorSpaceType().toString())
+        val model = Model.newInstance(applicationContext)
+        // Creates inputs for reference.
+        val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 100, 100, 3), DataType.FLOAT32)
+        inputFeature0.loadBuffer(bitmapToNormalizedByteBuffer(cropCenterSquare(bitmap)))
+        binding.imageView.setImageBitmap(byteBufferToBitmap(bitmapToNormalizedByteBuffer(cropCenterSquare(bitmap))))
 
-        interpreter?.run(myimg.getTensorBuffer().buffer, output)
+        // Runs model inference and gets result.
+        val outputs = model.process(inputFeature0)
+        val result = outputs.outputFeature0AsTensorBuffer.floatArray
 
-        // Post-processing: find the digit that has the highest probability
-        // and return it a human-readable string.
-        val result = output[0]
-        Log.i("output", output[0].toString())
-        Log.i("output", output[0][0].toString())
-        Log.i("output", output[0][1].toString())
-        Log.i("output", output[0][2].toString())
+        // Releases model resources if no longer used.
+        model.close()
         val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
         val classes=arrayOf("Broccoli","Cauliflower","Unknown")
         val resultString =
@@ -117,5 +104,64 @@ class MainActivity : AppCompatActivity() {
         return resultString
     }
 
+    fun cropCenterSquare(bitmap: Bitmap): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+        val newEdge = minOf(width, height)
 
+        val xOffset = (width - newEdge) / 2
+        val yOffset = (height - newEdge) / 2
+
+        return Bitmap.createBitmap(bitmap, xOffset, yOffset, newEdge, newEdge)
+    }
+
+    fun byteBufferToBitmap(buffer: ByteBuffer, width: Int = 100, height: Int = 100): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        buffer.rewind()
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                // Read normalized RGB floats
+                val r = (buffer.float * 255.0f).toInt().coerceIn(0, 255)
+                val g = (buffer.float * 255.0f).toInt().coerceIn(0, 255)
+                val b = (buffer.float * 255.0f).toInt().coerceIn(0, 255)
+
+                // Reconstruct ARGB pixel (opaque)
+                val color = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+                bitmap.setPixel(x, y, color)
+            }
+        }
+
+        return bitmap
+    }
+
+    fun bitmapToNormalizedByteBuffer(bitmap: Bitmap): ByteBuffer {
+        val width = 100
+        val height = 100
+        val bytesPerChannel = 4  // Float = 4 bytes
+        val numChannels = 3      // RGB
+        val byteBuffer = ByteBuffer.allocateDirect(width * height * numChannels * bytesPerChannel)
+        byteBuffer.order(ByteOrder.nativeOrder())
+
+        // Resize the bitmap
+        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
+
+        // Extract pixels
+        val pixels = IntArray(width * height)
+        resizedBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        // Normalize and write to ByteBuffer
+        for (pixel in pixels) {
+            val r = ((pixel shr 16) and 0xFF) / 255.0f
+            val g = ((pixel shr 8) and 0xFF) / 255.0f
+            val b = (pixel and 0xFF) / 255.0f
+
+            byteBuffer.putFloat(r)
+            byteBuffer.putFloat(g)
+            byteBuffer.putFloat(b)
+        }
+
+        byteBuffer.rewind()
+        return byteBuffer
+    }
 }
