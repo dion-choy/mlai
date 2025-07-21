@@ -37,6 +37,7 @@ import org.tensorflow.lite.support.image.ops.ResizeOp
 import org.tensorflow.lite.support.image.ops.ResizeWithCropOrPadOp
 import org.tensorflow.lite.support.image.ops.Rot90Op
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.Executors
 import kotlin.math.max
 
 
@@ -160,6 +161,9 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
         }
         return true
     }
+    private var lastAnalyzedTime = 0L
+    private val throttleDelay = 500 // milliseconds
+    private val analysisExecutor = Executors.newSingleThreadExecutor()
     fun bindPreview(cameraProvider : ProcessCameraProvider) {
         var preview : Preview = Preview.Builder()
             .build()
@@ -172,8 +176,10 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_BLOCK_PRODUCER)
             .build()
 
-        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), { imageProxy ->
-            if (!isImport) {
+        imageAnalysis.setAnalyzer(analysisExecutor, { imageProxy ->
+            val currentTime = System.currentTimeMillis()
+            if (!isImport && currentTime - lastAnalyzedTime >= throttleDelay) {
+                lastAnalyzedTime = currentTime
                 val bitmap = imageProxyToBitmap(imageProxy)
                 if (bitmap != null) {
                     val label = classify(bitmap)
@@ -230,7 +236,9 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
             .add(NormalizeOp(0f,255f))
             .build()
         var myimg=imageProcessor.process(myTensorImage)
-        binding.imageView2.setImageBitmap(myimg.bitmap)
+        runOnUiThread {
+            binding.imageView2.setImageBitmap(myimg.bitmap)
+        }
         myimg=normaliser.process(myimg)
 
         // Define an array to store the model output.
