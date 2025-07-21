@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
     private lateinit var cameraProviderFuture : ListenableFuture<ProcessCameraProvider>
     private lateinit var context:Context;
     var isImport:Boolean=false
-    val models= arrayOf("gen7.tflite", "gen8.tflite", "gen9.tflite", "yolo.tflite")
+    val models= arrayOf("gen7.tflite", "gen8.tflite", "gen9.tflite", "yolo.tflite", "yoloPretrained.tflite")
     fun loadModel(filename:String, context:Context){
         val model= FileUtil.loadMappedFile(context, filename)
         val interpreter= Interpreter(model)
@@ -77,6 +77,7 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
         val ad: ArrayAdapter<*> = ArrayAdapter<Any?>(this, android.R.layout.simple_spinner_item, models)
         ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinner.adapter = ad
+        spinner.setSelection(2)
 
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         if (allPermissionsGranted()) {
