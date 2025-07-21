@@ -64,7 +64,7 @@ while (True):
     cv2.imshow("Classification", original)
 
     if (cv2.waitKey(1) & 0xFF == ord('q')):
-        break;
+        break
 
 cap.release()
 frame = None
