@@ -1,9 +1,7 @@
 import os
-import random
-import shutil
 from PIL import Image
 
-def crop_to_aspect_ratio(image_path, save_path=None):
+def crop_to_aspect_ratio(image_path, save_path):
     with Image.open(image_path) as img:
         width, height = img.size
         aspect_ratio = width / height
@@ -23,23 +21,16 @@ def crop_to_aspect_ratio(image_path, save_path=None):
             box = (0, top, width, top + new_height)
 
         cropped = img.crop(box)
+        cropped.save(save_path)
 
-        if save_path:
-            cropped.save(save_path)
-        else:
-            cropped.show()
-
-def make_landscape(image_path, save_path=None):
+def make_landscape(image_path, save_path):
     with Image.open(image_path) as img:
         width, height = img.size
 
         if height > width:
             img = img.rotate(-90, expand=True)
 
-        if save_path:
-            img.save(save_path)
-        else:
-            img.show()
+        img.save(save_path)
 
 if __name__ == "__main__":
 
