@@ -26,13 +26,7 @@ def import_and_predict(image_data, model):
         
         return prediction
 
-model = tf.keras.models.load_model('./models/gen5 copy/model.hdf5')
-# converter = tf.lite.TFLiteConverter.from_keras_model(model)
-# tflite_model = converter.convert()
-
-# # Save the model.
-# with open('tflitemodel.tflite', 'wb') as f:
-#   f.write(tflite_model)
+model = tf.keras.models.load_model('./models/gen9/model.hdf5')
     
 cap = cv2.VideoCapture(0)
 
@@ -60,7 +54,8 @@ while (True):
     else:
         predict="It is a unknown!"
     
-    cv2.putText(original, predict + str(prediction[0]), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+    cv2.putText(original, predict, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+    cv2.putText(original, str(prediction[0]), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     cv2.imshow("Classification", original)
 
     if (cv2.waitKey(1) & 0xFF == ord('q')):
