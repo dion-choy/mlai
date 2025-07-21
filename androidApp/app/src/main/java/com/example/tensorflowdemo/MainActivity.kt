@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity(), OnItemSelectedListener {
     private lateinit var cameraProviderFuture : ListenableFuture<ProcessCameraProvider>
     private lateinit var context:Context;
     var isImport:Boolean=false
-    val models= arrayOf("gen7.tflite", "gen8.tflite", "yolo.tflite")
+    val models= arrayOf("gen7.tflite", "gen8.tflite", "gen9.tflite", "yolo.tflite")
     fun loadModel(filename:String, context:Context){
         val model= FileUtil.loadMappedFile(context, filename)
         val interpreter= Interpreter(model)
