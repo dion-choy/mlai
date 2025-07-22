@@ -45,7 +45,6 @@ if __name__ == "__main__":
         make_landscape(path_source+source_file, path_source+source_file)
 
         with Image.open(path_source+source_file) as img:
-            img = img.rotate(180, expand=True)
             img.save(path_source+f"unknown_{num}.jpg")
         num += 1
 
